@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparison Tournament</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .comparison-container {
+            display: flex;
+            justify-content: space-around;
+            margin: 40px 0;
+        }
+        
+        .item-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            width: 40%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .item-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .item-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .progress-container {
+            margin-top: 30px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        progress {
+            width: 100%;
+            height: 20px;
+        }
+        
+        .results-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .results-button:hover {
+            background-color: #45a049;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .results-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+            text-align: left;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .results-table th, .results-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .results-table th {
+            background-color: #f2f2f2;
+            text-align: left;
+        }
+        
+        .setup-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .setup-button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .setup-button:hover {
+            background-color: #0b7dda;
+        }
+        
+        .api-key-container {
+            margin-top: 10px;
+        }
+        
+        #apiKeyInput {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Setup Section -->
+    <div class="setup-container" id="setupContainer">
+        <h1>Tournament Setup</h1>
+        <p>Enter each item on a new line below:</p>
+        <textarea id="itemsInput" placeholder="Item 1&#10;Item 2&#10;Item 3"></textarea>
+        
+        <div class="api-key-container">
+            <p>Enter your Airtable API key and Base ID:</p>
+            <input type="text" id="apiKeyInput" placeholder="Your Airtable API Key">
+            <input type="text" id="baseIdInput" placeholder="Your Airtable Base ID">
+            <p>Don't have an Airtable account? <a href="https://airtable.com/signup" target="_blank">Create one here</a></p>
+        </div>
+        
+        <button class="setup-button" onclick="setupTournament()">Start Tournament</button>
+        <p class="error-message" id="setupError"></p>
+    </div>
+
+    <!-- Comparison Section -->
+    <div id="comparisonSection" class="hidden">
+        <h1 id="tournamentTitle">Comparison Tournament</h1>
+        
+        <div class="comparison-container">
+            <div class="item-card" id="itemA" onclick="selectItem(0)">
+                <div class="item-name" id="itemAName">Item A</div>
+            </div>
+            <div class="item-card" id="itemB" onclick="selectItem(1)">
+                <div class="item-name" id="itemBName">Item B</div>
+            </div>
+        </div>
+        
+        <div class="progress-container">
+            <p>Progress: <span id="progressText">0/0</span></p>
+            <progress id="progressBar" value="0" max="100"></progress>
+        </div>
+        
+        <button class="results-button" onclick="showResults()">Show Current Results</button>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="hidden">
+        <h1>Tournament Results</h1>
+        <div class="results-container">
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Item</th>
+                        <th>Wins</th>
+                        <th>Losses</th>
+                        <th>Win Rate</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsTableBody">
+                    <!-- Results will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+        <button class="setup-button" onclick="returnToComparison()" style="margin-top: 20px;">Return to Comparisons</button>
+    </div>
+
+    <script>
+        // Tournament variables
+        let items = [];
+        let comparisons = [];
+        let currentComparison = 0;
+        let results = {};
+        let apiKey = '';
+        let baseId = '';
+        const tableId = 'tblComparisonResults'; // We'll use this table name in Airtable
+        
+        // Initialize the tournament with items from the input
+        function setupTournament() {
+            const itemsText = document.getElementById('itemsInput').value.trim();
+            apiKey = document.getElementById('apiKeyInput').value.trim();
+            baseId = document.getElementById('baseIdInput').value.trim();
+            
+            // Validate inputs
+            if (!itemsText) {
+                document.getElementById('setupError').textContent = 'Please enter at least two items to compare.';
+                return;
+            }
+            
+            if (!apiKey || !baseId) {
+                document.getElementById('setupError').textContent = 'Please enter both Airtable API Key and Base ID.';
+                return;
+            }
+            
+            // Parse items
+            items = itemsText.split('\n').map(item => item.trim()).filter(item => item.length > 0);
+            
+            if (items.length < 2) {
+                document.getElementById('setupError').textContent = 'Please enter at least two items to compare.';
+                return;
+            }
+            
+            // Generate all possible pairs for comparison
+            comparisons = [];
+            for (let i = 0; i < items.length; i++) {
+                for (let j = i + 1; j < items.length; j++) {
+                    // Randomize order for each pair
+                    if (Math.random() > 0.5) {
+                        comparisons.push([i, j]);
+                    } else {
+                        comparisons.push([j, i]);
+                    }
+                }
+            }
+            
+            // Shuffle comparisons for more engaging experience
+            comparisons = shuffleArray(comparisons);
+            
+            // Initialize results
+            items.forEach(item => {
+                results[item] = { wins: 0, losses: 0 };
+            });
+            
+            // Setup the first comparison
+            currentComparison = 0;
+            displayCurrentComparison();
+            
+            // Show comparison section, hide setup
+            document.getElementById('setupContainer').classList.add('hidden');
+            document.getElementById('comparisonSection').classList.remove('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            
+            // Update title
+            document.getElementById('tournamentTitle').textContent = "Select the better option:";
+        }
+        
+        // Display the current comparison
+        function displayCurrentComparison() {
+            if (currentComparison < comparisons.length) {
+                const indexA = comparisons[currentComparison][0];
+                const indexB = comparisons[currentComparison][1];
+                
+                document.getElementById('itemAName').textContent = items[indexA];
+                document.getElementById('itemBName').textContent = items[indexB];
+                
+                // Update progress
+                document.getElementById('progressText').textContent = `${currentComparison + 1}/${comparisons.length}`;
+                document.getElementById('progressBar').value = ((currentComparison + 1) / comparisons.length) * 100;
+                document.getElementById('progressBar').max = 100;
+            } else {
+                // Tournament completed
+                showResults();
+            }
+        }
+        
+        // Handle item selection
+        function selectItem(selected) {
+            if (currentComparison >= comparisons.length) return;
+            
+            const indexA = comparisons[currentComparison][0];
+            const indexB = comparisons[currentComparison][1];
+            
+            let winner, loser;
+            
+            if (selected === 0) {
+                winner = items[indexA];
+                loser = items[indexB];
+            } else {
+                winner = items[indexB];
+                loser = items[indexA];
+            }
+            
+            // Update results
+            results[winner].wins += 1;
+            results[loser].losses += 1;
+            
+            // Send result to Airtable
+            sendResultToAirtable(winner, loser);
+            
+            // Move to next comparison
+            currentComparison++;
+            
+            if (currentComparison < comparisons.length) {
+                displayCurrentComparison();
+            } else {
+                // Tournament completed
+                showResults();
+            }
+        }
+        
+        // Send a comparison result to Airtable
+        function sendResultToAirtable(winner, loser) {
+            const url = `https://api.airtable.com/v0/${baseId}/Items`;
+            
+            // Check if the items exist, then update them
+            fetch(url + `?filterByFormula={Name}="${encodeURIComponent(winner)}"`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.records && data.records.length > 0) {
+                    // Item exists, update it
+                    const record = data.records[0];
+                    const currentWins = record.fields.Wins || 0;
+                    
+                    fetch(url, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            records: [
+                                {
+                                    id: record.id,
+                                    fields: {
+                                        Wins: currentWins + 1
+                                    }
+                                }
+                            ]
+                        })
+                    }).catch(error => console.error('Error updating winner:', error));
+                } else {
+                    // Item doesn't exist, create it
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            records: [
+                                {
+                                    fields: {
+                                        Name: winner,
+                                        Wins: 1,
+                                        Losses: 0
+                                    }
+                                }
+                            ]
+                        })
+                    }).catch(error => console.error('Error creating winner:', error));
+                }
+            })
+            .catch(error => console.error('Error checking winner:', error));
+            
+            // Do the same for the loser
+            fetch(url + `?filterByFormula={Name}="${encodeURIComponent(loser)}"`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.records && data.records.length > 0) {
+                    // Item exists, update it
+                    const record = data.records[0];
+                    const currentLosses = record.fields.Losses || 0;
+                    
+                    fetch(url, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            records: [
+                                {
+                                    id: record.id,
+                                    fields: {
+                                        Losses: currentLosses + 1
+                                    }
+                                }
+                            ]
+                        })
+                    }).catch(error => console.error('Error updating loser:', error));
+                } else {
+                    // Item doesn't exist, create it
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            records: [
+                                {
+                                    fields: {
+                                        Name: loser,
+                                        Wins: 0,
+                                        Losses: 1
+                                    }
+                                }
+                            ]
+                        })
+                    }).catch(error => console.error('Error creating loser:', error));
+                }
+            })
+            .catch(error => console.error('Error checking loser:', error));
+            
+            // Also record the comparison in a separate table
+            fetch(`https://api.airtable.com/v0/${baseId}/Comparisons`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    records: [
+                        {
+                            fields: {
+                                Winner: winner,
+                                Loser: loser,
+                                Timestamp: new Date().toISOString()
+                            }
+                        }
+                    ]
+                })
+            }).catch(error => console.error('Error recording comparison:', error));
+        }
+        
+        // Show the results page
+        function showResults() {
+            document.getElementById('comparisonSection').classList.add('hidden');
+            document.getElementById('resultsSection').classList.remove('hidden');
+            
+            // Sort items by win rate
+            const sortedItems = Object.keys(results).sort((a, b) => {
+                const aWinRate = results[a].wins / (results[a].wins + results[a].losses) || 0;
+                const bWinRate = results[b].wins / (results[b].wins + results[b].losses) || 0;
+                return bWinRate - aWinRate;
+            });
+            
+            // Display results
+            const resultsTable = document.getElementById('resultsTableBody');
+            resultsTable.innerHTML = '';
+            
+            sortedItems.forEach((item, index) => {
+                const wins = results[item].wins;
+                const losses = results[item].losses;
+                const total = wins + losses;
+                const winRate = total > 0 ? (wins / total * 100).toFixed(1) : '0.0';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${item}</td>
+                    <td>${wins}</td>
+                    <td>${losses}</td>
+                    <td>${winRate}%</td>
+                `;
+                
+                resultsTable.appendChild(row);
+            });
+        }
+        
+        // Return to the comparison page
+        function returnToComparison() {
+            if (currentComparison < comparisons.length) {
+                document.getElementById('comparisonSection').classList.remove('hidden');
+                document.getElementById('resultsSection').classList.add('hidden');
+            } else {
+                // Tournament completed, return to setup
+                document.getElementById('setupContainer').classList.remove('hidden');
+                document.getElementById('resultsSection').classList.add('hidden');
+            }
+        }
+        
+        // Utility function to shuffle an array (Fisher-Yates algorithm)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+    </script>
+</body>
+</html>
