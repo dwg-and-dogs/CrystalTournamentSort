@@ -46,6 +46,18 @@
             margin-bottom: 10px;
         }
         
+        .item-details {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .item-image {
+            max-width: 80px;
+            max-height: 80px;
+            margin: 10px auto;
+            display: block;
+        }
+        
         .progress-container {
             margin-top: 30px;
             background-color: white;
@@ -59,7 +71,7 @@
             height: 20px;
         }
         
-        .results-button {
+        .button {
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -70,8 +82,16 @@
             margin-top: 20px;
         }
         
-        .results-button:hover {
+        .button:hover {
             background-color: #45a049;
+        }
+        
+        .button.blue {
+            background-color: #2196F3;
+        }
+        
+        .button.blue:hover {
+            background-color: #0b7dda;
         }
         
         .hidden {
@@ -112,41 +132,78 @@
         
         textarea {
             width: 100%;
-            height: 100px;
+            height: 150px;
             margin-bottom: 10px;
             padding: 8px;
             border-radius: 4px;
             border: 1px solid #ddd;
+            font-family: monospace;
         }
         
-        .setup-button {
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
+        .results-panel {
+            margin-top: 20px;
+            text-align: center;
         }
         
-        .setup-button:hover {
-            background-color: #0b7dda;
-        }
-        
-        .api-key-container {
-            margin-top: 10px;
-        }
-        
-        #apiKeyInput {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
+        .share-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f4f8;
+            border-radius: 8px;
         }
         
         .error-message {
             color: red;
+            margin-top: 10px;
+        }
+        
+        .info-text {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: black;
+        }
+        
+        #submitResult {
+            margin-top: 30px;
+        }
+        
+        .submit-success {
+            color: #4CAF50;
+            font-weight: bold;
             margin-top: 10px;
         }
     </style>
@@ -155,17 +212,38 @@
     <!-- Setup Section -->
     <div class="setup-container" id="setupContainer">
         <h1>Tournament Setup</h1>
-        <p>Enter each item on a new line below:</p>
-        <textarea id="itemsInput" placeholder="Item 1&#10;Item 2&#10;Item 3"></textarea>
+        <p>Enter your items below in JSON format (one object per item):</p>
+        <textarea id="itemsInput" placeholder='[
+  {
+    "name": "Item 1",
+    "description": "Optional description for item 1"
+  },
+  {
+    "name": "Item 2",
+    "description": "Optional description for item 2"  
+  },
+  {
+    "name": "Item 3",
+    "description": "Optional description for item 3"
+  }
+]'></textarea>
         
-        <div class="api-key-container">
-            <p>Enter your Airtable API key and Base ID:</p>
-            <input type="text" id="apiKeyInput" placeholder="Your Airtable API Key">
-            <input type="text" id="baseIdInput" placeholder="Your Airtable Base ID">
-            <p>Don't have an Airtable account? <a href="https://airtable.com/signup" target="_blank">Create one here</a></p>
+        <div>
+            <p>Select your mode:</p>
+            <select id="modeSelect">
+                <option value="local">Local Mode (Results saved in browser)</option>
+                <option value="public">Public Mode (Submit results to GitHub)</option>
+            </select>
+            
+            <div id="githubConfigSection" class="hidden">
+                <p class="info-text">In public mode, results will be submitted as GitHub issues to your repository.</p>
+                <input type="text" id="repoOwnerInput" placeholder="GitHub Username" style="width: 48%; margin-right: 2%;">
+                <input type="text" id="repoNameInput" placeholder="Repository Name" style="width: 48%;">
+                <p class="info-text">Make sure your repository has issues enabled and is public.</p>
+            </div>
         </div>
         
-        <button class="setup-button" onclick="setupTournament()">Start Tournament</button>
+        <button class="button blue" onclick="setupTournament()">Start Tournament</button>
         <p class="error-message" id="setupError"></p>
     </div>
 
@@ -176,9 +254,11 @@
         <div class="comparison-container">
             <div class="item-card" id="itemA" onclick="selectItem(0)">
                 <div class="item-name" id="itemAName">Item A</div>
+                <div class="item-details" id="itemADetails"></div>
             </div>
             <div class="item-card" id="itemB" onclick="selectItem(1)">
                 <div class="item-name" id="itemBName">Item B</div>
+                <div class="item-details" id="itemBDetails"></div>
             </div>
         </div>
         
@@ -187,7 +267,7 @@
             <progress id="progressBar" value="0" max="100"></progress>
         </div>
         
-        <button class="results-button" onclick="showResults()">Show Current Results</button>
+        <button class="button" onclick="showResults()">Show Current Results</button>
     </div>
 
     <!-- Results Section -->
@@ -209,7 +289,44 @@
                 </tbody>
             </table>
         </div>
-        <button class="setup-button" onclick="returnToComparison()" style="margin-top: 20px;">Return to Comparisons</button>
+        
+        <div id="resultsControls">
+            <button class="button blue" onclick="returnToComparison()" style="margin-top: 20px;">Return to Comparisons</button>
+            
+            <!-- Show this in public mode when tournament is complete -->
+            <div id="submitResult" class="hidden">
+                <hr>
+                <h3>Submit Your Results</h3>
+                <p>Share your results with the community!</p>
+                <button class="button" onclick="submitToGitHub()">Submit Results to GitHub</button>
+                <p id="submitSuccess" class="submit-success hidden">Results submitted successfully!</p>
+            </div>
+            
+            <!-- Local mode sharing options -->
+            <div id="localResults" class="hidden">
+                <hr>
+                <h3>Save Your Results</h3>
+                <button class="button blue" onclick="exportResults()">Export Results as JSON</button>
+                
+                <div class="share-container">
+                    <h3>Share This Tournament</h3>
+                    <p>Copy this link to share this exact tournament with others:</p>
+                    <input type="text" id="shareLink" readonly style="width: 100%; padding: 8px;">
+                    <button class="button" onclick="copyShareLink()" style="margin-top: 10px;">Copy Link</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completion Modal -->
+    <div id="completionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Tournament Complete!</h2>
+            <p>You've completed all comparisons in this tournament.</p>
+            <p>View your results to see how each item ranked.</p>
+            <button class="button" onclick="showFinalResults()">View Final Results</button>
+        </div>
     </div>
 
     <script>
@@ -218,67 +335,118 @@
         let comparisons = [];
         let currentComparison = 0;
         let results = {};
-        let apiKey = '';
-        let baseId = '';
-        const tableId = 'tblComparisonResults'; // We'll use this table name in Airtable
+        let tournamentMode = 'local'; // 'local' or 'public'
+        let repoOwner = '';
+        let repoName = '';
+        let uniqueId = generateUniqueId(); // For URL sharing
+        
+        // Check if we're loading a shared tournament
+        window.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedData = urlParams.get('data');
+            
+            if (encodedData) {
+                try {
+                    // Decode and parse the shared data
+                    const decodedData = decodeURIComponent(encodedData);
+                    const tournamentData = JSON.parse(decodedData);
+                    
+                    // Populate the form with the shared data
+                    document.getElementById('itemsInput').value = JSON.stringify(tournamentData.items, null, 2);
+                    
+                    // Auto-start in local mode
+                    tournamentMode = 'local';
+                    document.getElementById('modeSelect').value = 'local';
+                } catch (error) {
+                    console.error('Error loading shared tournament:', error);
+                    document.getElementById('setupError').textContent = 'Error loading shared tournament data.';
+                }
+            }
+        });
+        
+        // Toggle GitHub config visibility based on selected mode
+        document.getElementById('modeSelect').addEventListener('change', function() {
+            const mode = this.value;
+            tournamentMode = mode;
+            document.getElementById('githubConfigSection').classList.toggle('hidden', mode !== 'public');
+        });
         
         // Initialize the tournament with items from the input
         function setupTournament() {
-            const itemsText = document.getElementById('itemsInput').value.trim();
-            apiKey = document.getElementById('apiKeyInput').value.trim();
-            baseId = document.getElementById('baseIdInput').value.trim();
-            
-            // Validate inputs
-            if (!itemsText) {
-                document.getElementById('setupError').textContent = 'Please enter at least two items to compare.';
-                return;
-            }
-            
-            if (!apiKey || !baseId) {
-                document.getElementById('setupError').textContent = 'Please enter both Airtable API Key and Base ID.';
-                return;
-            }
-            
-            // Parse items
-            items = itemsText.split('\n').map(item => item.trim()).filter(item => item.length > 0);
-            
-            if (items.length < 2) {
-                document.getElementById('setupError').textContent = 'Please enter at least two items to compare.';
-                return;
-            }
-            
-            // Generate all possible pairs for comparison
-            comparisons = [];
-            for (let i = 0; i < items.length; i++) {
-                for (let j = i + 1; j < items.length; j++) {
-                    // Randomize order for each pair
-                    if (Math.random() > 0.5) {
-                        comparisons.push([i, j]);
-                    } else {
-                        comparisons.push([j, i]);
+            try {
+                // Parse JSON input
+                const itemsJson = document.getElementById('itemsInput').value.trim();
+                if (!itemsJson) {
+                    document.getElementById('setupError').textContent = 'Please enter items in JSON format.';
+                    return;
+                }
+                
+                items = JSON.parse(itemsJson);
+                
+                if (!Array.isArray(items) || items.length < 2) {
+                    document.getElementById('setupError').textContent = 'Please enter at least two items in the correct JSON format.';
+                    return;
+                }
+                
+                // Check if each item has at least a name
+                for (const item of items) {
+                    if (!item.name) {
+                        document.getElementById('setupError').textContent = 'Each item must have at least a "name" property.';
+                        return;
                     }
                 }
+                
+                // Get repository info if in public mode
+                if (tournamentMode === 'public') {
+                    repoOwner = document.getElementById('repoOwnerInput').value.trim();
+                    repoName = document.getElementById('repoNameInput').value.trim();
+                    
+                    if (!repoOwner || !repoName) {
+                        document.getElementById('setupError').textContent = 'Please enter both GitHub username and repository name.';
+                        return;
+                    }
+                }
+                
+                // Generate all possible pairs for comparison
+                comparisons = [];
+                for (let i = 0; i < items.length; i++) {
+                    for (let j = i + 1; j < items.length; j++) {
+                        // Randomize order for each pair
+                        if (Math.random() > 0.5) {
+                            comparisons.push([i, j]);
+                        } else {
+                            comparisons.push([j, i]);
+                        }
+                    }
+                }
+                
+                // Shuffle comparisons for more engaging experience
+                comparisons = shuffleArray(comparisons);
+                
+                // Initialize results
+                items.forEach(item => {
+                    item.wins = 0;
+                    item.losses = 0;
+                });
+                
+                // Setup the first comparison
+                currentComparison = 0;
+                displayCurrentComparison();
+                
+                // Generate share link
+                updateShareLink();
+                
+                // Show comparison section, hide setup
+                document.getElementById('setupContainer').classList.add('hidden');
+                document.getElementById('comparisonSection').classList.remove('hidden');
+                document.getElementById('resultsSection').classList.add('hidden');
+                
+                // Update title
+                document.getElementById('tournamentTitle').textContent = "Select the better option:";
+                
+            } catch (error) {
+                document.getElementById('setupError').textContent = 'Error parsing JSON: ' + error.message;
             }
-            
-            // Shuffle comparisons for more engaging experience
-            comparisons = shuffleArray(comparisons);
-            
-            // Initialize results
-            items.forEach(item => {
-                results[item] = { wins: 0, losses: 0 };
-            });
-            
-            // Setup the first comparison
-            currentComparison = 0;
-            displayCurrentComparison();
-            
-            // Show comparison section, hide setup
-            document.getElementById('setupContainer').classList.add('hidden');
-            document.getElementById('comparisonSection').classList.remove('hidden');
-            document.getElementById('resultsSection').classList.add('hidden');
-            
-            // Update title
-            document.getElementById('tournamentTitle').textContent = "Select the better option:";
         }
         
         // Display the current comparison
@@ -286,9 +454,15 @@
             if (currentComparison < comparisons.length) {
                 const indexA = comparisons[currentComparison][0];
                 const indexB = comparisons[currentComparison][1];
+                const itemA = items[indexA];
+                const itemB = items[indexB];
                 
-                document.getElementById('itemAName').textContent = items[indexA];
-                document.getElementById('itemBName').textContent = items[indexB];
+                document.getElementById('itemAName').textContent = itemA.name;
+                document.getElementById('itemBName').textContent = itemB.name;
+                
+                // Display descriptions if available
+                document.getElementById('itemADetails').textContent = itemA.description || '';
+                document.getElementById('itemBDetails').textContent = itemB.description || '';
                 
                 // Update progress
                 document.getElementById('progressText').textContent = `${currentComparison + 1}/${comparisons.length}`;
@@ -296,7 +470,7 @@
                 document.getElementById('progressBar').max = 100;
             } else {
                 // Tournament completed
-                showResults();
+                showCompletionModal();
             }
         }
         
@@ -318,11 +492,8 @@
             }
             
             // Update results
-            results[winner].wins += 1;
-            results[loser].losses += 1;
-            
-            // Send result to Airtable
-            sendResultToAirtable(winner, loser);
+            winner.wins = (winner.wins || 0) + 1;
+            loser.losses = (loser.losses || 0) + 1;
             
             // Move to next comparison
             currentComparison++;
@@ -331,145 +502,24 @@
                 displayCurrentComparison();
             } else {
                 // Tournament completed
-                showResults();
+                showCompletionModal();
             }
         }
         
-        // Send a comparison result to Airtable
-        function sendResultToAirtable(winner, loser) {
-            const url = `https://api.airtable.com/v0/${baseId}/Items`;
-            
-            // Check if the items exist, then update them
-            fetch(url + `?filterByFormula={Name}="${encodeURIComponent(winner)}"`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.records && data.records.length > 0) {
-                    // Item exists, update it
-                    const record = data.records[0];
-                    const currentWins = record.fields.Wins || 0;
-                    
-                    fetch(url, {
-                        method: 'PATCH',
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            records: [
-                                {
-                                    id: record.id,
-                                    fields: {
-                                        Wins: currentWins + 1
-                                    }
-                                }
-                            ]
-                        })
-                    }).catch(error => console.error('Error updating winner:', error));
-                } else {
-                    // Item doesn't exist, create it
-                    fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            records: [
-                                {
-                                    fields: {
-                                        Name: winner,
-                                        Wins: 1,
-                                        Losses: 0
-                                    }
-                                }
-                            ]
-                        })
-                    }).catch(error => console.error('Error creating winner:', error));
-                }
-            })
-            .catch(error => console.error('Error checking winner:', error));
-            
-            // Do the same for the loser
-            fetch(url + `?filterByFormula={Name}="${encodeURIComponent(loser)}"`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.records && data.records.length > 0) {
-                    // Item exists, update it
-                    const record = data.records[0];
-                    const currentLosses = record.fields.Losses || 0;
-                    
-                    fetch(url, {
-                        method: 'PATCH',
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            records: [
-                                {
-                                    id: record.id,
-                                    fields: {
-                                        Losses: currentLosses + 1
-                                    }
-                                }
-                            ]
-                        })
-                    }).catch(error => console.error('Error updating loser:', error));
-                } else {
-                    // Item doesn't exist, create it
-                    fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            records: [
-                                {
-                                    fields: {
-                                        Name: loser,
-                                        Wins: 0,
-                                        Losses: 1
-                                    }
-                                }
-                            ]
-                        })
-                    }).catch(error => console.error('Error creating loser:', error));
-                }
-            })
-            .catch(error => console.error('Error checking loser:', error));
-            
-            // Also record the comparison in a separate table
-            fetch(`https://api.airtable.com/v0/${baseId}/Comparisons`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    records: [
-                        {
-                            fields: {
-                                Winner: winner,
-                                Loser: loser,
-                                Timestamp: new Date().toISOString()
-                            }
-                        }
-                    ]
-                })
-            }).catch(error => console.error('Error recording comparison:', error));
+        // Show the completion modal
+        function showCompletionModal() {
+            document.getElementById('completionModal').style.display = 'block';
+        }
+        
+        // Close the modal
+        function closeModal() {
+            document.getElementById('completionModal').style.display = 'none';
+        }
+        
+        // Show final results after completion
+        function showFinalResults() {
+            closeModal();
+            showResults();
         }
         
         // Show the results page
@@ -478,9 +528,9 @@
             document.getElementById('resultsSection').classList.remove('hidden');
             
             // Sort items by win rate
-            const sortedItems = Object.keys(results).sort((a, b) => {
-                const aWinRate = results[a].wins / (results[a].wins + results[a].losses) || 0;
-                const bWinRate = results[b].wins / (results[b].wins + results[b].losses) || 0;
+            const sortedItems = [...items].sort((a, b) => {
+                const aWinRate = a.wins / (a.wins + a.losses) || 0;
+                const bWinRate = b.wins / (b.wins + b.losses) || 0;
                 return bWinRate - aWinRate;
             });
             
@@ -489,15 +539,15 @@
             resultsTable.innerHTML = '';
             
             sortedItems.forEach((item, index) => {
-                const wins = results[item].wins;
-                const losses = results[item].losses;
+                const wins = item.wins || 0;
+                const losses = item.losses || 0;
                 const total = wins + losses;
                 const winRate = total > 0 ? (wins / total * 100).toFixed(1) : '0.0';
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${index + 1}</td>
-                    <td>${item}</td>
+                    <td>${item.name}</td>
                     <td>${wins}</td>
                     <td>${losses}</td>
                     <td>${winRate}%</td>
@@ -505,6 +555,12 @@
                 
                 resultsTable.appendChild(row);
             });
+            
+            // Show appropriate result options based on mode and completion status
+            document.getElementById('submitResult').classList.toggle('hidden', 
+                !(tournamentMode === 'public' && currentComparison >= comparisons.length));
+            document.getElementById('localResults').classList.toggle('hidden', 
+                tournamentMode !== 'local');
         }
         
         // Return to the comparison page
@@ -519,13 +575,123 @@
             }
         }
         
+        // Submit results to GitHub as an issue
+        function submitToGitHub() {
+            // Sort items by win rate for the report
+            const sortedItems = [...items].sort((a, b) => {
+                const aWinRate = a.wins / (a.wins + a.losses) || 0;
+                const bWinRate = b.wins / (b.wins + b.losses) || 0;
+                return bWinRate - aWinRate;
+            });
+            
+            // Create a markdown table for the results
+            let resultsTable = '| Rank | Item | Wins | Losses | Win Rate |\n';
+            resultsTable += '|------|------|------|--------|----------|\n';
+            
+            sortedItems.forEach((item, index) => {
+                const wins = item.wins || 0;
+                const losses = item.losses || 0;
+                const total = wins + losses;
+                const winRate = total > 0 ? (wins / total * 100).toFixed(1) : '0.0';
+                
+                resultsTable += `| ${index + 1} | ${item.name} | ${wins} | ${losses} | ${winRate}% |\n`;
+            });
+            
+            // Create issue title and body
+            const issueTitle = 'Tournament Results: ' + new Date().toLocaleDateString();
+            const issueBody = `## Tournament Results\n\n${resultsTable}\n\n*Submitted on ${new Date().toLocaleString()}*`;
+            
+            // Submit as a GitHub issue
+            fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/issues`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify({
+                    title: issueTitle,
+                    body: issueBody
+                })
+            })
+            .then(response => {
+                if (response.status === 201) {
+                    document.getElementById('submitSuccess').classList.remove('hidden');
+                } else {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting to GitHub:', error);
+                alert('Error submitting results. GitHub API requires authentication for creating issues. Results saved locally.');
+                document.getElementById('localResults').classList.remove('hidden');
+            });
+        }
+        
+        // Export results as JSON
+        function exportResults() {
+            const resultsData = {
+                items: items,
+                timestamp: new Date().toISOString()
+            };
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(resultsData));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "tournament_results.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+        
+        // Update the share link
+        function updateShareLink() {
+            const shareData = {
+                items: items
+            };
+            
+            const encodedData = encodeURIComponent(JSON.stringify(shareData));
+            const shareUrl = `${window.location.href.split('?')[0]}?data=${encodedData}`;
+            
+            // Use a URL shortener if the URL is too long
+            if (shareUrl.length > 2000) {
+                document.getElementById('shareLink').value = "URL too long - use Export button instead";
+            } else {
+                document.getElementById('shareLink').value = shareUrl;
+            }
+        }
+        
+        // Copy share link to clipboard
+        function copyShareLink() {
+            const copyText = document.getElementById('shareLink');
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); // For mobile devices
+            
+            navigator.clipboard.writeText(copyText.value)
+                .then(() => {
+                    // Show feedback (optional)
+                    const originalText = copyText.nextElementSibling.textContent;
+                    copyText.nextElementSibling.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyText.nextElementSibling.textContent = originalText;
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                });
+        }
+        
+        // Generate a unique ID for the tournament
+        function generateUniqueId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        }
+        
         // Utility function to shuffle an array (Fisher-Yates algorithm)
         function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
             }
-            return array;
+            return newArray;
         }
     </script>
 </body>
